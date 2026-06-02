@@ -108,8 +108,15 @@ jobs:
           working-directory: /
           comment: Deploy
           command: |
-            docker pull ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest && \
-            docker stop app1 2>/dev/null || true && \
-            docker rm app1 2>/dev/null || true && \
-            docker run -d --name app1 --network common -p 8080:8080 ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest && \
-            docker rmi $(docker images -f "dangling=true" -q) || true
+            # 1. 최신 이미지 다운로드
+             docker pull ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest
+            
+             # 2. 기존 켜져있던 컨테이너 끄고 지우기 (실패해도 무시하고 다음 줄 실행)
+             docker stop app1 2>/dev/null || true
+             docker rm app1 2>/dev/null || true
+            
+             # 3. 새 버전의 컨테이너 실행하기 🌟 (network가 common인지 꼭 확인!)
+             docker run -d --name app1 --network common -p 8080:8080 ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest
+            
+             # 4. 찌꺼기 이미지 청소
+             docker rmi $(docker images -f "dangling=true" -q) || true
